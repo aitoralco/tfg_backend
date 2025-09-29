@@ -9,11 +9,10 @@
 ### Podman
     
 *To start podman*: 
-    ```bash 
-        podman machine start 
-    ```
+    ```bash podman machine start ```
 
-    - To build: ```bash podman build -t cetaceans-db ```
+*To build*: 
+    ```bash podman build -t cetaceans-db ```
 
     - To start container for the first time: ```bash podman run --name cetaceans-db -p 5432:5432 -d cetaceans-db ```
 
