@@ -8,7 +8,7 @@
 
 ### Podman
     
-
+💾 For the database a container with posgressSql is being used.
 
 #### To start podman: 
 ```bash 
