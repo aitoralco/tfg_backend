@@ -2,11 +2,16 @@
 
 ## Technology
 
-- **FastApi**
-- **UV**
-- **Podman**
+### FastApi
+
+### UV
+
+### Podman
     
-    - To start podman: ```bash podman machine start ```
+*To start podman*: 
+    ```bash 
+        podman machine start 
+    ```
 
     - To build: ```bash podman build -t cetaceans-db ```
 
