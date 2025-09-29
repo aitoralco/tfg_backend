@@ -6,7 +6,8 @@
 - **UV**
 - **Podman**
     
-    - To start podman: ```podman machine start```
+    - To start podman: 
+        ```podman machine start```
 
     - To build: ```podman build -t cetaceans-db```
 
