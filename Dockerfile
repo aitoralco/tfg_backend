@@ -1,0 +1,15 @@
+# Get image
+from postgres:15-alpine
+
+# Set environment variables
+ARG POSTGRES_DB=cetaceans
+ARG POSTGRES_USER=admin
+ARG POSTGRES_PASSWORD=admin
+
+ENV POSTGRES_DB=$POSTGRES_DB \
+    POSTGRES_USER=$POSTGRES_USER \
+    POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+
+
+# Port
+EXPOSE 5432
