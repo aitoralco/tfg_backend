@@ -1,0 +1,26 @@
+### Users api routes
+
+
+### Get user by ID
+GET http://localhost:8000/users/3 HTTP/1.1
+
+
+### Create new user
+POST http://localhost:8000/users/ HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "password": "newpassword"
+}
+
+
+### User login
+POST http://localhost:8000/users/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "password": "newpassword"
+}
