@@ -13,7 +13,7 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/", response_model=UserRead)
+@router.post("/register", response_model=UserRead)
 async def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
     return create_user(db, user)
 
