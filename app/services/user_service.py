@@ -33,3 +33,7 @@ def login_user(db: Session, username: str, password: str) -> UserRead | None:
     if user and pwd_context.verify(password, user.password_hash):
         return user
     return None
+
+
+def get_all_users(db: Session) -> list[UserRead]:
+    return db.query(UserModel).all()

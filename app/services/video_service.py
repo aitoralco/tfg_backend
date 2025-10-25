@@ -123,7 +123,11 @@ def get_videos_previews(db: Session, user_id: int = None, offset: int = 0, limit
     - size: number of initial bytes to read from each file
     """
     limit = min(limit, 50)
-    if user_id:
+
+    
+
+    if user_id and user_id != 0:
+        print("get_videos_previews called with user_id:", user_id)
         videos = db.query(VideoModel).filter(VideoModel.user_id == user_id).order_by(VideoModel.id).offset(offset).limit(limit).all()
     else:
         videos = db.query(VideoModel).order_by(VideoModel.id).offset(offset).limit(limit).all()

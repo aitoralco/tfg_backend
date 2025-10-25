@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.schemas.user_schema import UserCreate, UserRead, UserLogin
-from app.services.user_service import create_user, get_user, login_user
+from app.services.user_service import create_user, get_user, login_user, get_all_users
 from app.db.session import SessionLocal
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -35,3 +35,8 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Invalid credentials")
     return user
+
+
+@router.get("/get_all_users", response_model=list[UserRead])
+async def get_users(db: Session = Depends(get_db)):
+    return get_all_users(db)

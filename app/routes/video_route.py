@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Header, HTTPException, status
+from fastapi import APIRouter, Depends, UploadFile, File, Header, HTTPException, status, Form
 from app.schemas.video_schema import VideoUploadResponse
 from sqlalchemy.orm import Session
 from app.services.video_service import save_video, get_video_stream
@@ -21,14 +21,20 @@ def get_db():
 
 
 @router.post("/upload", response_model=VideoUploadResponse)
-async def upload_video(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_video(file: UploadFile = File(...), user_id: str = Form(...), db: Session = Depends(get_db)):
     # Save the video metadata and write file to disk
-    result = save_video(db, file, user_id=1, video_title=file.filename)
+    print("upload_video called with user_id:", user_id)
+    user_id = int(user_id)
+    if user_id == 0:
+        # error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="user_id is required")
+    result = save_video(db, file, user_id=user_id, video_title=file.filename)
     return VideoUploadResponse(message="Video uploaded successfully", video_id=result.id)
 
 @router.get("/previews", response_model=VideoPreviewsResponse)
-def videos_previews(user_id: int = None, offset: int = 0, limit: int = 10, size: int = 1024, db: Session = Depends(get_db)):
+def videos_previews(user_id: str = None, offset: int = 0, limit: int = 10, size: int = 1024, db: Session = Depends(get_db)):
     """Return base64 previews with pagination. limit default 10, max 50."""
+    user_id = int(user_id) if user_id is not None else None
     previews = get_videos_previews(db, user_id=user_id, offset=offset, limit=limit, size=size)
     return {"previews": previews}
 
