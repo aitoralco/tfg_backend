@@ -37,3 +37,26 @@ def login_user(db: Session, username: str, password: str) -> UserRead | None:
 
 def get_all_users(db: Session) -> list[UserRead]:
     return db.query(UserModel).all()
+
+
+def update_db_user(db: Session, user_id: int, user_update: UserCreate) -> UserRead | None:
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if user:
+        user.username = user_update.username
+        user.email = user_update.email
+        user.password_hash = get_password_hash(user_update.password)
+        user.role = user_update.role
+        db.commit()
+        db.refresh(user)
+        return user
+    else:
+        raise ValueError("User not found")
+
+
+def delete_db_user(db: Session, user_id: int) -> bool:
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if user:
+        db.delete(user)
+        db.commit()
+        return True
+    return False

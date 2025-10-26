@@ -14,11 +14,20 @@ class UserRead(BaseModel):
     class Config:
         orm_mode = True
 
+
 # For creating a new user
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+
+#For updating user data
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    role: Optional[int] = None
 
 
 # For login in
