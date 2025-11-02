@@ -36,6 +36,8 @@ def login_user(db: Session, username: str, password: str) -> UserRead | None:
 
 
 def get_all_users(db: Session) -> list[UserRead]:
+
+    
     return db.query(UserModel).all()
 
 

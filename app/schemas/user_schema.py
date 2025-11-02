@@ -2,12 +2,21 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
+# ROle read
+class RoleRead(BaseModel):
+    id: int
+    name: str
+    role_number: int
+
+    class Config:
+        orm_mode = True
+
 # For reading user data
 class UserRead(BaseModel):
     id: int
     username: str
     email: EmailStr
-    role: int
+    role: RoleRead
     created_at: datetime
     updated_at: datetime
 
@@ -27,7 +36,7 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    role: Optional[int] = None
+    role: Optional[RoleRead] = None
 
 
 # For login in
