@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user_model import UserModel
-from app.schemas.user_schema import UserCreate, UserRead
+from app.models.role_model import RoleModel
+from app.schemas.user_schema import UserCreate, UserRead, RoleRead
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -15,7 +16,7 @@ def create_user(db: Session, user: UserCreate):
         "username": user.username,
         "email": user.email,
         "password_hash": hashed_password,
-        "role": 0
+        "role_number_fk": 0 # 0 is default for regular user
     }
 
     db_user = UserModel(**new_user)
@@ -62,3 +63,16 @@ def delete_db_user(db: Session, user_id: int) -> bool:
         db.commit()
         return True
     return False
+
+
+def create_role_in_db(db: Session, role) -> RoleRead:
+    new_role = {
+        "name": role.name,
+        "role_number": role.role_number
+    }
+
+    db_role = RoleModel(**new_role)
+    db.add(db_role)
+    db.commit()
+    db.refresh(db_role)
+    return db_role

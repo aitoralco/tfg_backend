@@ -43,3 +43,17 @@ class UserUpdate(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+
+
+class RoleRead(BaseModel):
+    id: int
+    name: str
+    role_number: int
+
+    class Config:
+        orm_mode = True
+
+
+class RoleCreate(BaseModel):
+    name: str
+    role_number: int

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.schemas.user_schema import UserCreate, UserRead, UserLogin, UserUpdate
-from app.services.user_service import create_user, get_user, login_user, get_all_users, update_db_user
+from app.schemas.user_schema import UserCreate, UserRead, UserLogin, UserUpdate, RoleRead, RoleCreate
+from app.services.user_service import create_user, get_user, login_user, get_all_users, update_db_user, create_role_in_db
 from app.db.session import SessionLocal
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -23,7 +23,7 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/register", response_model=UserRead)
+@router.post("/register")
 async def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
     return create_user(db, user)
 
@@ -31,6 +31,11 @@ async def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.get("/get_all_users", response_model=list[UserRead])
 async def get_users(db: Session = Depends(get_db)):
     return get_all_users(db)
+
+
+@router.post("/create_role", response_model=RoleRead)
+async def create_role(role: RoleCreate, db: Session = Depends(get_db)):
+    return create_role_in_db(db, role)
 
 
 @router.get("/{user_id}", response_model=UserRead)

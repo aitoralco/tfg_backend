@@ -17,7 +17,7 @@ podman machine start
 
 #### To build: 
 ```bash 
-podman build -t cetaceans-db 
+podman build -t cetaceans-db .
 ```
 
 #### To start container for the first time: 
@@ -40,3 +40,10 @@ podman stop cetaceans-db
 podman exec -it cetaceans-db psql -U admin -d cetaceans 
 ```
 
+### For the backend
+
+#### To start the backend
+```bash
+source .venv/bin/activate
+uvicorn main:app --reload
+```
