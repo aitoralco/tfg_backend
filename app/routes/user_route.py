@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.schemas.user_schema import UserCreate, UserRead, UserLogin, UserUpdate, RoleRead, RoleCreate
-from app.services.user_service import create_user, get_user, login_user, get_all_users, update_db_user, create_role_in_db
+from app.services.user_service import create_user, get_user, login_user, get_all_users, update_db_user, create_role_in_db, delete_db_user
 from app.db.session import SessionLocal
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -38,17 +38,17 @@ async def create_role(role: RoleCreate, db: Session = Depends(get_db)):
     return create_role_in_db(db, role)
 
 
+@router.post("/update/{user_id}", response_model=UserRead)
+async def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
+    return update_db_user(db, user_id, user)
+
+
 @router.get("/{user_id}", response_model=UserRead)
 async def read_user(user_id: int, db: Session = Depends(get_db)):
     db_user = get_user(db, user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
-
-
-@router.post("/{user_id}", response_model=UserRead)
-async def update_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
-    return update_db_user(db, user_id, user)
 
 
 @router.delete("/{user_id}")

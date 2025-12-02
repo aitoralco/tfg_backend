@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user_model import UserModel
 from app.models.role_model import RoleModel
-from app.schemas.user_schema import UserCreate, UserRead, RoleRead
+from app.schemas.user_schema import UserCreate, UserRead, RoleRead, UserUpdate
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -42,18 +42,29 @@ def get_all_users(db: Session) -> list[UserRead]:
     return db.query(UserModel).all()
 
 
-def update_db_user(db: Session, user_id: int, user_update: UserCreate) -> UserRead | None:
+def update_db_user(db: Session, user_id: int, user_update: UserUpdate) -> UserRead | None:
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
-    if user:
-        user.username = user_update.username
-        user.email = user_update.email
-        user.password_hash = get_password_hash(user_update.password)
-        user.role = user_update.role
-        db.commit()
-        db.refresh(user)
+    if not user:
+        return None
+
+    update_data = user_update.dict(exclude_unset=True)
+
+    print("Update data:", user_update)
+
+    if not update_data:
         return user
-    else:
-        raise ValueError("User not found")
+
+    if "password" in update_data:
+        hashed_password = get_password_hash(update_data.pop("password"))
+        update_data["password_hash"] = hashed_password
+        del update_data["password"]
+
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 def delete_db_user(db: Session, user_id: int) -> bool:

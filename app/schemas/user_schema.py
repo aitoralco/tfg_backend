@@ -36,7 +36,10 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    role: Optional[RoleRead] = None
+    role_number_fk: Optional[int] = None
+
+    class Config:
+        extra = "ignore"
 
 
 # For login in
