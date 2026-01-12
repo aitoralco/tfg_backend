@@ -43,7 +43,14 @@ podman exec -it cetaceans-db psql -U admin -d cetaceans
 ### For the backend
 
 #### To start the backend
+
+#### Get into WSL
+```bash
+    $ wsl -d Ubuntu
+```
+
+#### Then activate the virtual env and start the backend
 ```bash
 source .venv/bin/activate
-uvicorn main:app --reload
+uvicorn main:app --reload --port 3000
 ```

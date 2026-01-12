@@ -60,3 +60,34 @@ def stream_video(video_id: int, range: str | None = Header(None), db: Session = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
     # video.file_name debe ser el nombre único que guardaste al subir
     return get_video_stream(video.file_name, range)
+
+
+@router.put("/enqueue_test")
+def enqueue_test(db: Session = Depends(get_db)):
+    """Debug endpoint: create a dummy video record and enqueue a processing job for it."""
+    from app.redis.redis_engine import RedisEngine
+
+    # Create dummy video record
+    dummy_video = VideoModel(
+        user_id=1,
+        title="Test Video",
+        file_name="test_video.mp4"
+    )
+    #db.add(dummy_video)
+    #db.commit()
+    #db.refresh(dummy_video)
+
+    # Enqueue processing job
+    redis_engine = RedisEngine()
+    job_data = {
+        "video_id": dummy_video.id,
+        "file_name": dummy_video.file_name,
+        "user_id": dummy_video.user_id
+    }
+
+    def VIDEO_PROCESSING_FUNCTION():
+        pass  # Placeholder for the actual video processing function name
+
+    redis_engine.enqueue_job(VIDEO_PROCESSING_FUNCTION, job_data)
+
+    return {"message": "Test video record created and job enqueued", "video_id": dummy_video.id}

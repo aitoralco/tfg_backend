@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.video_model import VideoModel
 from app.schemas.video_schema import VideoCreate, VideoRead
+from app.filesystem import FileSystemClient
 from fastapi import UploadFile, HTTPException, status
 from fastapi.responses import StreamingResponse
 
@@ -46,6 +47,13 @@ def save_video(db: Session, video_file: UploadFile, user_id: int, video_title: s
         video_file.file.close()
     except Exception:
         pass
+
+    # Test video upload to MINIO/S3
+    fs_client = FileSystemClient()
+    try:
+        fs_client.upload_video(str(file_path), unique_filename, str(user_id))
+    except Exception as e:
+        print(f"Failed to upload video to filesystem: {e}")
 
     return db_video
 

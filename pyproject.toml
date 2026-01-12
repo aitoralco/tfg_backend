@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.16.5",
+    "boto3>=1.42.6",
+    "dotenv>=0.9.9",
     "fastapi>=0.118.0",
     "moviepy>=1.0.3",
     "passlib>=1.7.4",
@@ -13,6 +15,8 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "pydantic[email]>=2.11.9",
     "python-multipart>=0.0.20",
+    "redis>=7.1.0",
+    "rq>=2.6.1",
     "sqlalchemy>=2.0.43",
     "uvicorn>=0.37.0",
 ]
