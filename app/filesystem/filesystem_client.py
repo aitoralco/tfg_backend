@@ -1,26 +1,42 @@
 import boto3
 from botocore.client import Config
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import settings
 
 class FileSystemClient:
     def __init__(self):
         self.s3_client = boto3.client(
             's3',
             # --- MINIO Configuration ---
-            endpoint_url=os.getenv('FILESYSTEM_URL'),
-            aws_access_key_id=os.getenv('FILESYSTEM_ID_KEY'),
-            aws_secret_access_key=os.getenv('FILESYSTEM_ACCESS_KEY'),
+            endpoint_url=settings.FILESYSTEM_URL,
+            aws_access_key_id=settings.FILESYSTEM_ID_KEY,
+            aws_secret_access_key=settings.FILESYSTEM_ACCESS_KEY,
             config=Config(
                 signature_version='s3v4',
-                s3={'addressing_style': 'path'} if os.getenv('FORCE_PATH_STYLE') == 'true' else {}
+                s3={'addressing_style': 'path'} if settings.FORCE_PATH_STYLE == 'true' else {}
             ),
-            region_name=os.getenv('REGION_NAME')
+            region_name=settings.REGION_NAME
         )
-        self.bucket = os.getenv('BUCKET_NAME')
+        self.bucket = settings.BUCKET_NAME
 
+    # Subir video en stream
+    def upload_video_stream(self, file_stream, filename: str, user_id: str, size: int, processed: bool):
+        """Sube video en stream directamente al mino sin guardarlo en ningún directorio del backend"""
+        if processed:
+            proc = 'processed'
+        else:
+            proc = 'raw'
+
+        object_name = f"{user_id}/{proc}/{filename}"
+
+        self.s3_client.put_object(
+            Bucket=self.bucket,
+            Key=object_name,
+            Body=file_stream,
+            ContentLength=size,
+            ContentType="video/mp4"
+        )
+
+    # Subir video desde archivo
     def upload_video(self, file_path: str, object_name: str, user_id: str, processed: bool = False):
         """Upload a video file to the filesystem bucket."""
         try:

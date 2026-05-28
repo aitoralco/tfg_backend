@@ -46,11 +46,12 @@ podman exec -it cetaceans-db psql -U admin -d cetaceans
 
 #### Get into WSL
 ```bash
-    $ wsl -d Ubuntu
+conda create -n tfg-backend python=3.12 -y 
 ```
 
 #### Then activate the virtual env and start the backend
 ```bash
-source .venv/bin/activate
+conda activate tfg-backend
+uv pip install -r requirements.txt
 uvicorn main:app --reload --port 3000
 ```

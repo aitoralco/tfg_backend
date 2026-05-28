@@ -3,33 +3,36 @@ from app.schemas.video_schema import VideoUploadResponse
 from sqlalchemy.orm import Session
 from app.services.video_service import save_video, get_video_stream
 from app.models.video_model import VideoModel
-from app.services.video_service import get_videos_previews
-from app.schemas.video_schema import VideoPreviewsResponse
-
-
-from app.db.session import SessionLocal
+from app.services.video_service import get_videos_previews, create_video_status
+from app.schemas.video_schema import VideoPreviewsResponse, CreateVideoStatusResponse
+from app.db.session import get_db
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+@router.post("/create_status", response_model=CreateVideoStatusResponse)
+async def create_status(status_name: str, db: Session = Depends(get_db)):
+    #create a new status
+    result = create_video_status(db, status_name)
+    return CreateVideoStatusResponse(id=result.id, status_name=result.status_name)
 
 
 @router.post("/upload", response_model=VideoUploadResponse)
-async def upload_video(file: UploadFile = File(...), user_id: str = Form(...), db: Session = Depends(get_db)):
+async def upload_video( user_id: int = Form(...), 
+                        video_name: str = Form(...), 
+                        description: str = Form(...), 
+                        file: UploadFile = File(...), 
+                        db: Session = Depends(get_db)
+                        ):
     # Save the video metadata and write file to disk
-    print("upload_video called with user_id:", user_id)
+    #print("upload_video called with user_id:", user_id)
     user_id = int(user_id)
     if user_id == 0:
         # error
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="user_id is required")
-    result = save_video(db, file, user_id=user_id, video_title=file.filename)
+    result = save_video(db, file, user_id=user_id, video_title=video_name, video_description=description)
     return VideoUploadResponse(message="Video uploaded successfully", video_id=result.id)
+
 
 @router.get("/previews", response_model=VideoPreviewsResponse)
 def videos_previews(user_id: str = None, offset: int = 0, limit: int = 10, size: int = 1024, db: Session = Depends(get_db)):
@@ -65,29 +68,27 @@ def stream_video(video_id: int, range: str | None = Header(None), db: Session = 
 @router.put("/enqueue_test")
 def enqueue_test(db: Session = Depends(get_db)):
     """Debug endpoint: create a dummy video record and enqueue a processing job for it."""
-    from app.redis.redis_engine import RedisEngine
+    from app.cache_redis.redis_engine import RedisEngine
+    from app.cache_redis.tasks import worker_test
+    import time
 
     # Create dummy video record
-    dummy_video = VideoModel(
-        user_id=1,
-        title="Test Video",
-        file_name="test_video.mp4"
-    )
+    #dummy_video = VideoModel(
+    #    user_id=1,
+    #    title="Test Video",
+    #    file_name="test_video.mp4"
+    #)
     #db.add(dummy_video)
     #db.commit()
     #db.refresh(dummy_video)
 
     # Enqueue processing job
     redis_engine = RedisEngine()
-    job_data = {
-        "video_id": dummy_video.id,
-        "file_name": dummy_video.file_name,
-        "user_id": dummy_video.user_id
-    }
 
-    def VIDEO_PROCESSING_FUNCTION():
-        pass  # Placeholder for the actual video processing function name
+    now_time = time.time()
 
-    redis_engine.enqueue_job(VIDEO_PROCESSING_FUNCTION, job_data)
+    text = f"Hello from api at {now_time}"
 
-    return {"message": "Test video record created and job enqueued", "video_id": dummy_video.id}
+    redis_engine.enqueue_job(worker_test, text)
+
+    return {"message": "Test video record created and job enqueued"}

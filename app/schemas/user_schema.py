@@ -6,7 +6,7 @@ from datetime import datetime
 class RoleRead(BaseModel):
     id: int
     name: str
-    role_number: int
+    #role_number: int
 
     class Config:
         orm_mode = True
@@ -48,15 +48,15 @@ class UserLogin(BaseModel):
     password: str
 
 
-class RoleRead(BaseModel):
-    id: int
-    name: str
-    role_number: int
-
-    class Config:
-        orm_mode = True
+#class RoleRead(BaseModel):
+#    id: int
+#    name: str
+#    #role_id: int
+#
+#    class Config:
+#        orm_mode = True
 
 
 class RoleCreate(BaseModel):
     name: str
-    role_number: int
+    role_id: int

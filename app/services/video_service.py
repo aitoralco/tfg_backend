@@ -1,12 +1,14 @@
 from sqlalchemy.orm import Session
 from app.models.video_model import VideoModel
+from app.models.video_status_model import VideoStatusModel
 from app.schemas.video_schema import VideoCreate, VideoRead
 from app.filesystem import FileSystemClient
+from app.cache_redis.redis_engine import RedisEngine
+from app.cache_redis.tasks import process_video
 from fastapi import UploadFile, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from pathlib import Path
-import shutil
 import uuid
 import mimetypes
 import re
@@ -14,25 +16,40 @@ import base64
 from typing import List
 
 
-def save_video(db: Session, video_file: UploadFile, user_id: int, video_title: str):
+def create_video_status(db: Session, status_name: str):
+    """
+        Create a new status name for videos
+    """
+
+    new_status = {
+        "status_name": status_name
+    }
+
+    db_model = VideoStatusModel(**new_status)
+    db.add(db_model)
+    db.commit()
+    db.refresh(db_model)
+
+    return db_model
+
+
+def save_video(db: Session, video_file: UploadFile, user_id: int, video_title: str, video_description: str):
     """Save video metadata in DB and write file to disk with a unique filename.
 
     Returns the DB VideoModel instance.
     """
-    # directorio app/videos relativo al paquete app
-    videos_dir = Path(__file__).resolve().parents[1] / "videos"
-    videos_dir.mkdir(parents=True, exist_ok=True)
 
+    # Generar nombre único para el video
     ext = Path(video_file.filename).suffix
     unique_filename = f"{uuid.uuid4().hex}{ext}"
-    file_path = videos_dir / unique_filename
 
     # save video info to database (guardar el nombre único)
     new_video = {
         "user_id": user_id,
         "title": video_title,
         "file_name": unique_filename,
-        "processed": False,
+        "status_id": 1, #1 es el default para unprocessed
+        "description": video_description
     }
 
     db_video = VideoModel(**new_video)
@@ -40,22 +57,58 @@ def save_video(db: Session, video_file: UploadFile, user_id: int, video_title: s
     db.commit()
     db.refresh(db_video)
 
-    with file_path.open("wb") as buffer:
-        shutil.copyfileobj(video_file.file, buffer)
-
-    try:
-        video_file.file.close()
-    except Exception:
-        pass
-
-    # Test video upload to MINIO/S3
+    # Stremear el archivo directamente al minio desde memoria
     fs_client = FileSystemClient()
     try:
-        fs_client.upload_video(str(file_path), unique_filename, str(user_id))
+        fs_client.upload_video_stream(
+            file_stream=video_file.file,
+            filename=unique_filename,
+            user_id=user_id,
+            size=video_file.size,
+            processed=False
+        )
+    
     except Exception as e:
-        print(f"Failed to upload video to filesystem: {e}")
+        print(f"Failed to upload video directly to MinIO: {e}")
+        raise e
+    
+    finally:
+        # Cerrar file stream
+        try:
+            video_file.file.close()
+        except Exception:
+            pass
+
+    # Enviar tarea a redis
+    try:
+        redis_engine = RedisEngine()
+        redis_engine.enqueue_job(
+            process_video,  # función a usar 
+            db_video.id     # ID del video a proceasr (después de subida a MinIO y DB)
+        )
+        print(f"Successfully enqueued processing task for video ID {db_video.id}.")
+    except Exception as redis_err:
+        # Para tener el error de porque no ha encolado la tarea
+        print(f"Warning: Video upload but failed to enqueue background task: {redis_err}.")
 
     return db_video
+
+    #with file_path.open("wb") as buffer:
+    #    shutil.copyfileobj(video_file.file, buffer)
+#
+    #try:
+    #    video_file.file.close()
+    #except Exception:
+    #    pass
+#
+    ## Test video upload to MINIO/S3
+    #fs_client = FileSystemClient()
+    #try:
+    #    fs_client.upload_video(str(file_path), unique_filename, str(user_id))
+    #except Exception as e:
+    #    print(f"Failed to upload video to filesystem: {e}")
+#
+    #return db_video
 
 
 # --- funciones para streaming con soporte Range ---

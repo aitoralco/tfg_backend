@@ -1,0 +1,19 @@
+# Ignore virtual environments wherever they are
+**/venv/
+**/.venv/
+**/env/
+
+# Ignore local databases and large data files
+*.sqlite3
+*.db
+*.csv
+*.json
+
+# Ignore IDE settings and cache
+.vscode/
+.idea/
+.pytest_cache/
+
+# Other local files
+./app/videos
+.env

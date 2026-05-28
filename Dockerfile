@@ -1,15 +1,25 @@
-# Get image
-from postgres:15-alpine
+# Dockerfile for the backend
+# Imagen de python
+FROM python:3.12-slim
 
-# Set environment variables
-ARG POSTGRES_DB=cetaceans
-ARG POSTGRES_USER=admin
-ARG POSTGRES_PASSWORD=admin
+# Variables de entorno
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-ENV POSTGRES_DB=$POSTGRES_DB \
-    POSTGRES_USER=$POSTGRES_USER \
-    POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+# Direcotrio de trabajo dentro del contenedor
+WORKDIR /api
 
+# Copiar archivo de requirements.txt
+COPY ./requirements.txt /api/requirements.txt
 
-# Port
-EXPOSE 5432
+# Instalar dependencias
+RUN pip install --no-cache-dir --upgrade -r /api/requirements.txt
+
+# Copiar el resto de la aplicacion
+COPY ./app /api/app
+
+# Exponer el puerto de fastapi
+EXPOSE 8000
+
+# Comando para arancar la aplicación con el CLI de fastapi
+CMD ["fastapi", "run", "app/main.py", "--port", "8000"]

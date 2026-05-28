@@ -3,16 +3,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.schemas.user_schema import UserCreate, UserRead, UserLogin, UserUpdate, RoleRead, RoleCreate
 from app.services.user_service import create_user, get_user, login_user, get_all_users, update_db_user, create_role_in_db, delete_db_user
-from app.db.session import SessionLocal
+from app.db.session import get_db
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.post("/login", response_model=UserRead)

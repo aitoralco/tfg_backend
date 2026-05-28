@@ -40,3 +40,9 @@ class VideoPreviewsResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# For video status
+class CreateVideoStatusResponse(BaseModel):
+    id: int
+    status_name: str

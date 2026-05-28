@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user_model import UserModel
 from app.models.role_model import RoleModel
-from app.schemas.user_schema import UserCreate, UserRead, RoleRead, UserUpdate
+from app.schemas.user_schema import UserCreate, UserRead, RoleRead, UserUpdate, RoleCreate
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -16,7 +16,7 @@ def create_user(db: Session, user: UserCreate):
         "username": user.username,
         "email": user.email,
         "password_hash": hashed_password,
-        "role_number_fk": 0 # 0 is default for regular user
+        "role_id": 2 # 2 is default for regular user
     }
 
     db_user = UserModel(**new_user)
@@ -49,7 +49,6 @@ def update_db_user(db: Session, user_id: int, user_update: UserUpdate) -> UserRe
 
     update_data = user_update.dict(exclude_unset=True)
 
-    print("Update data:", user_update)
 
     if not update_data:
         return user
@@ -57,7 +56,8 @@ def update_db_user(db: Session, user_id: int, user_update: UserUpdate) -> UserRe
     if "password" in update_data:
         hashed_password = get_password_hash(update_data.pop("password"))
         update_data["password_hash"] = hashed_password
-        del update_data["password"]
+        if "password" in update_data:
+            del update_data["password"]
 
     for key, value in update_data.items():
         setattr(user, key, value)
@@ -76,13 +76,16 @@ def delete_db_user(db: Session, user_id: int) -> bool:
     return False
 
 
-def create_role_in_db(db: Session, role) -> RoleRead:
-    new_role = {
-        "name": role.name,
-        "role_number": role.role_number
-    }
+def create_role_in_db(db: Session, role: RoleCreate) -> RoleRead:
+    role_data = role.dict()
+    
+    actual_id = role_data.pop("role_id", None) or role_data.pop("role_number", None)
 
-    db_role = RoleModel(**new_role)
+    db_role = RoleModel(
+        id=actual_id,
+        name=role_data["name"]
+    )
+
     db.add(db_role)
     db.commit()
     db.refresh(db_role)

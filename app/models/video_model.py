@@ -19,7 +19,8 @@ class VideoModel(Base):
     )
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    description = Column(String, nullable=True)
+    
     # Relación con los status
     status = relationship("VideoStatusModel", back_populates="videos")
 
