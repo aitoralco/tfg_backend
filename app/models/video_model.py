@@ -21,6 +21,9 @@ class VideoModel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     description = Column(String, nullable=True)
     
+    # Columna para agrupar contenido de los videos
+    group_id = Column(Integer, nullable=False, default=0)
+
     # Relación con los status
     status = relationship("VideoStatusModel", back_populates="videos")
 
