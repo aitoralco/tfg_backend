@@ -55,3 +55,13 @@ conda activate tfg-backend
 uv pip install -r requirements.txt
 uvicorn main:app --reload --port 3000
 ```
+
+#### To start the backend in development mode
+```bash
+fastapi dev ./app/main.py
+```
+
+#### To start the DB base info
+```bash
+python -m app.db.starter
+```

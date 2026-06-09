@@ -8,8 +8,7 @@ class RoleRead(BaseModel):
     name: str
     #role_number: int
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 # For reading user data
 class UserRead(BaseModel):
@@ -20,8 +19,7 @@ class UserRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 # For creating a new user

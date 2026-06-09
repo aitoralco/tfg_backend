@@ -13,8 +13,7 @@ class VideoRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 class VideoUploadResponse(BaseModel):
     message: str
@@ -38,8 +37,7 @@ class VideoPreview(BaseModel):
 class VideoPreviewsResponse(BaseModel):
     previews: List[VideoPreview]
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 # For video status

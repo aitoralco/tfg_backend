@@ -5,6 +5,7 @@ Script to INSERT starter base data into the DB
 from app.db.session import get_db
 from app.models.role_model import RoleModel
 from app.models.video_status_model import VideoStatusModel
+from app.models.user_model import UserModel
 from sqlalchemy.orm import Session
 
 db_generator = get_db()
@@ -17,7 +18,8 @@ VIDEO_STATUS = [
     "processing_0",
     "processing_dw",
     "processing_ew",
-    "processing_dem"
+    "processing_dem",
+    "processed"
     ]
 
 # Insert base roles

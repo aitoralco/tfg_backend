@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from app.routes.routes import router as api_router
-from app.routes.video_route import router as video_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -22,4 +21,3 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
-app.include_router(video_router)

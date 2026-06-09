@@ -19,14 +19,10 @@ class FileSystemClient:
         self.bucket = settings.BUCKET_NAME
 
     # Subir video en stream
-    def upload_video_stream(self, file_stream, filename: str, user_id: str, size: int, processed: bool):
+    def upload_video_stream(self, file_stream, filename: str, user_id: str, size: int, group_id: int):
         """Sube video en stream directamente al mino sin guardarlo en ningún directorio del backend"""
-        if processed:
-            proc = 'processed'
-        else:
-            proc = 'raw'
 
-        object_name = f"{user_id}/{proc}/{filename}"
+        object_name = f"{user_id}/{group_id}/{filename}"
 
         self.s3_client.put_object(
             Bucket=self.bucket,

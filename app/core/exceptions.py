@@ -1,0 +1,2 @@
+# app/core/exceptions.py
+

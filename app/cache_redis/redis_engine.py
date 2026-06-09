@@ -18,12 +18,13 @@ class RedisEngine:
             print(f"Error connecting to Redis: {e}")
             raise
 
-    def enqueue_job(self, function: str, job_data: dict):
+    def enqueue_job(self, function: str, video_id: int):
         # Encuar tasca
         try:
             job = self.queue.enqueue(
                 function, 
-                json.dumps(job_data)
+                video_id,
+                job_timeout=3600
             )
             # Al encuar sempre fem al redis i sempre es una tasca de processament de video
         

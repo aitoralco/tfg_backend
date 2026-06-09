@@ -48,67 +48,80 @@ def save_video(db: Session, video_file: UploadFile, user_id: int, video_title: s
         "user_id": user_id,
         "title": video_title,
         "file_name": unique_filename,
-        "status_id": 1, #1 es el default para unprocessed
+        "status_id": 2, #2 es el default para unprocessed
         "description": video_description
     }
 
     db_video = VideoModel(**new_video)
-    db.add(db_video)
-    db.commit()
-    db.refresh(db_video)
-
-    # Stremear el archivo directamente al minio desde memoria
-    fs_client = FileSystemClient()
     try:
-        fs_client.upload_video_stream(
-            file_stream=video_file.file,
-            filename=unique_filename,
-            user_id=user_id,
-            size=video_file.size,
-            processed=False
-        )
-    
-    except Exception as e:
-        print(f"Failed to upload video directly to MinIO: {e}")
-        raise e
-    
-    finally:
-        # Cerrar file stream
         try:
-            video_file.file.close()
-        except Exception:
-            pass
+            db.add(db_video)
 
-    # Enviar tarea a redis
-    try:
-        redis_engine = RedisEngine()
-        redis_engine.enqueue_job(
-            process_video,  # función a usar 
-            db_video.id     # ID del video a proceasr (después de subida a MinIO y DB)
+            # Flush para enviar a DB y generar un ID
+            db.flush()
+
+            # Asignar el id a group_id
+            db_video.group_id = db_video.id
+
+        except Exception as db_err:
+            db.rollback()
+
+            raise HTTPException(
+                status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"A database error ocured while saving the video metadata: {db_err}"
+            )
+
+        # Stremear el archivo directamente al minio desde memoria
+        fs_client = FileSystemClient()
+        try:
+            fs_client.upload_video_stream(
+                file_stream=video_file.file,
+                filename=unique_filename,
+                user_id=user_id,
+                size=video_file.size,
+                group_id=db_video.group_id
+            )
+
+        except Exception as minio_err:
+            raise HTTPException(
+                status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"An error ocured while saving the video: {minio_err}"
+            )
+
+        finally:
+            # Cerrar file stream
+            try:
+                video_file.file.close()
+            except Exception:
+                pass
+
+        # Enviar tarea a redis
+        try:
+            redis_engine = RedisEngine()
+            redis_engine.enqueue_job(
+                process_video,  # función a usar 
+                db_video.id     # ID del video a proceasr (después de subida a MinIO y DB)
+            )
+            #print(f"Successfully enqueued processing task for video ID {db_video.id}.")
+        except Exception as redis_err:
+            raise HTTPException(
+                status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"An error ocured while queueing video to process: {redis_err}"
+            )
+
+        # Commit y cerrar toda la transacción
+        db.commit()
+        db.refresh(db_video)
+        return db_video
+    
+    except HTTPException:
+        raise
+    except Exception as unexpected_err:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected system failure occurred: {unexpected_err}"
         )
-        print(f"Successfully enqueued processing task for video ID {db_video.id}.")
-    except Exception as redis_err:
-        # Para tener el error de porque no ha encolado la tarea
-        print(f"Warning: Video upload but failed to enqueue background task: {redis_err}.")
-
-    return db_video
-
-    #with file_path.open("wb") as buffer:
-    #    shutil.copyfileobj(video_file.file, buffer)
-#
-    #try:
-    #    video_file.file.close()
-    #except Exception:
-    #    pass
-#
-    ## Test video upload to MINIO/S3
-    #fs_client = FileSystemClient()
-    #try:
-    #    fs_client.upload_video(str(file_path), unique_filename, str(user_id))
-    #except Exception as e:
-    #    print(f"Failed to upload video to filesystem: {e}")
-#
-    #return db_video
 
 
 # --- funciones para streaming con soporte Range ---
