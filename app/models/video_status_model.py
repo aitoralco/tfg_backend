@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 
 from app.db.session import Base
 
-# Status disponibls: unprocessed, error, processing_0, processing_dw (detecgint whales), processing_ew (extracting whales), processing_dem (detecting extracting marks)
+# Status disponibls: processed, unprocessed, error, processing_0, processing_dw (detecgint whales), processing_ew (extracting whales), processing_dem (detecting extracting marks)
 
 class VideoStatusModel(Base):
     __tablename__ = "video_status"

@@ -1,5 +1,5 @@
 from app.db.session import Base, engine
-from app.models import user_model 
+import app.models  # registers all models (user, role, video, video_status) with Base
 
 Base.metadata.create_all(bind=engine)
 

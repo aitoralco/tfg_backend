@@ -2,11 +2,15 @@
 Script to INSERT starter base data into the DB
 """
 
+from passlib.context import CryptContext
+
 from app.db.session import get_db
 from app.models.role_model import RoleModel
 from app.models.video_status_model import VideoStatusModel
 from app.models.user_model import UserModel
 from sqlalchemy.orm import Session
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 db_generator = get_db()
 db: Session = next(db_generator)
@@ -61,8 +65,27 @@ def base_video_status():
     db.commit()
 
 
+# Insert default admin user
+def base_admin_user():
+    exists = db.query(UserModel).filter(UserModel.username == "admin").first()
+    if not exists:
+        admin_role = db.query(RoleModel).filter(RoleModel.name == "admin").first()
+        db_user = UserModel(
+            username="admin",
+            email="admin@admin.com",
+            password_hash=pwd_context.hash("admin"),
+            role_id=admin_role.id,
+        )
+        db.add(db_user)
+        db.commit()
+        print("User: [admin] Inserted.")
+    else:
+        print("User: [admin] Already exists.")
+
+
 # Main
 if __name__ == "__main__":
     print("Inserting default DB data")
     base_roles()
     base_video_status()
+    base_admin_user()

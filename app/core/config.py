@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     REDIS_DB: int
     REDIS_PASSWORD: str
 
+    # JWT settings
+    JWT_SECRET_KEY: str
+
     # Minio settings
     FILESYSTEM_URL: str
     FILESYSTEM_ACCESS_KEY: str
