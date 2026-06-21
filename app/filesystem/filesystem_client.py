@@ -5,9 +5,7 @@ from app.core.config import settings
 
 class FileSystemClient:
     def __init__(self):
-        self.s3_client = boto3.client(
-            "s3",
-            endpoint_url=settings.FILESYSTEM_URL,
+        client_kwargs = dict(
             aws_access_key_id=settings.FILESYSTEM_ID_KEY,
             aws_secret_access_key=settings.FILESYSTEM_ACCESS_KEY,
             config=Config(
@@ -16,6 +14,13 @@ class FileSystemClient:
             ),
             region_name=settings.REGION_NAME,
         )
+        self.s3_client = boto3.client("s3", endpoint_url=settings.FILESYSTEM_URL, **client_kwargs)
+
+        # Separate client whose endpoint is the public URL — presigned URLs
+        # generated with this client are resolvable by the browser.
+        public_url = settings.FILESYSTEM_PUBLIC_URL or settings.FILESYSTEM_URL
+        self.s3_public_client = boto3.client("s3", endpoint_url=public_url, **client_kwargs)
+
         self.bucket = settings.BUCKET_NAME
         self._ensure_bucket()
 
@@ -113,7 +118,7 @@ class FileSystemClient:
         return objects
 
     def generate_presigned_url(self, key: str, expiry: int = 3600) -> str:
-        return self.s3_client.generate_presigned_url(
+        return self.s3_public_client.generate_presigned_url(
             "get_object",
             Params={"Bucket": self.bucket, "Key": key},
             ExpiresIn=expiry,

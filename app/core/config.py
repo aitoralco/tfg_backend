@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     # Minio settings
     FILESYSTEM_URL: str
+    FILESYSTEM_PUBLIC_URL: str = ""  # public-facing URL for presigned URLs; defaults to FILESYSTEM_URL
     FILESYSTEM_ACCESS_KEY: str
     FILESYSTEM_ID_KEY: str
     FORCE_PATH_STYLE: bool

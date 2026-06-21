@@ -24,7 +24,7 @@ class RedisEngine:
             job = self.queue.enqueue(
                 function, 
                 video_id,
-                job_timeout=3600
+                job_timeout=36000
             )
             # Al encuar sempre fem al redis i sempre es una tasca de processament de video
         

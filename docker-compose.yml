@@ -19,6 +19,7 @@ services:
       REDIS_DB: 0
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       FILESYSTEM_URL: http://filesystem-minio:9000
+      FILESYSTEM_PUBLIC_URL: http://localhost:9000
       FILESYSTEM_ID_KEY: ${MINIO_ROOT_USER}
       FILESYSTEM_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
       FORCE_PATH_STYLE: "true"
