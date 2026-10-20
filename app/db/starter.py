@@ -10,6 +10,8 @@ from app.models.video_status_model import VideoStatusModel
 from app.models.user_model import UserModel
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 db_generator = get_db()
@@ -71,9 +73,9 @@ def base_admin_user():
     if not exists:
         admin_role = db.query(RoleModel).filter(RoleModel.name == "admin").first()
         db_user = UserModel(
-            username="admin",
-            email="admin@admin.com",
-            password_hash=pwd_context.hash("admin"),
+            username=settings.ADMIN_USERNAME,
+            email=settings.ADMIN_EMAIL,
+            password_hash=settings.ADMIN_PASSWORD,
             role_id=admin_role.id,
         )
         db.add(db_user)

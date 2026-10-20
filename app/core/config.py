@@ -3,6 +3,9 @@ from pydantic import computed_field
 
 class Settings(BaseSettings):
     # Postgres Database settings
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_EMAIL: str = "admin@admin.com"
+    ADMIN_PASSWORD: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_SERVER: str

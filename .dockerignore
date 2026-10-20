@@ -2,6 +2,7 @@
 **/venv/
 **/.venv/
 **/env/
+**/__pycache__/
 
 # Ignore local databases and large data files
 *.sqlite3
