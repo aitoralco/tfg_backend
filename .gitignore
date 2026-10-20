@@ -1,9 +1,21 @@
-/app/videos/*
-
+# Entorno
 .env
-./*/__pycache__/*
-.venv
+.venv/
+venv/
+Lib/
+Scripts/
+Include/
+pyvenv.cfg
 
-*.pyc
-./.env
-claude.md
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Proyecto
+/app/videos/
+
+# IDE / herramientas
+.vscode/
+.idea/
+.claude/
