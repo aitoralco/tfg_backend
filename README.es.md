@@ -150,3 +150,7 @@ docker compose exec db-postgres psql -U <DB_USER> -d <DB_NAME>
 - `docs/endpoints.md`: lista de endpoints y su estado
 - `docs/frontend_api_guide.md`: guía de uso de la API para el frontend
 - `tests/api_tests/*.http`: colecciones de peticiones para probar la API
+
+## Licencia
+
+© 2026 Aitor Alonso Coloma. Con licencia [Creative Commons Atribución-NoComercial 4.0 Internacional (CC BY-NC 4.0)](LICENSE): puedes usarlo, compartirlo y adaptarlo con fines no comerciales, siempre que cites al autor y enlaces la licencia.
