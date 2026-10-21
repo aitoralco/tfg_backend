@@ -2,17 +2,14 @@
 Script to INSERT starter base data into the DB
 """
 
-from passlib.context import CryptContext
-
 from app.db.session import get_db
 from app.models.role_model import RoleModel
 from app.models.video_status_model import VideoStatusModel
 from app.models.user_model import UserModel
+from app.services.user_service import pwd_context, get_password_hash
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 db_generator = get_db()
 db: Session = next(db_generator)
@@ -69,20 +66,26 @@ def base_video_status():
 
 # Insert default admin user
 def base_admin_user():
-    exists = db.query(UserModel).filter(UserModel.username == "admin").first()
+    username = settings.ADMIN_USERNAME
+    exists = db.query(UserModel).filter(UserModel.username == username).first()
     if not exists:
         admin_role = db.query(RoleModel).filter(RoleModel.name == "admin").first()
         db_user = UserModel(
-            username=settings.ADMIN_USERNAME,
+            username=username,
             email=settings.ADMIN_EMAIL,
-            password_hash=settings.ADMIN_PASSWORD,
+            password_hash=get_password_hash(settings.ADMIN_PASSWORD),
             role_id=admin_role.id,
         )
         db.add(db_user)
         db.commit()
-        print("User: [admin] Inserted.")
+        print(f"User: [{username}] Inserted.")
+    # Si la contraseña se guardó en texto plano (seed antiguo), se hashea
+    elif pwd_context.identify(exists.password_hash) is None:
+        exists.password_hash = get_password_hash(settings.ADMIN_PASSWORD)
+        db.commit()
+        print(f"User: [{username}] Password re-hashed.")
     else:
-        print("User: [admin] Already exists.")
+        print(f"User: [{username}] Already exists.")
 
 
 # Main

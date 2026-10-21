@@ -1,5 +1,7 @@
 # Backend
 
+**English** | [Español](README.es.md)
+
 REST API of the project, built with **FastAPI**. It uses **PostgreSQL** (data), **Redis** (job queue for the worker) and **MinIO** (video storage, S3 compatible).
 
 ## Technology
