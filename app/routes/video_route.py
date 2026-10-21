@@ -24,9 +24,10 @@ from app.services.video_service import (
     get_dw_stream,
     get_ew_crops,
     get_dem_crops,
+    get_visible_video,
 )
 from app.models.video_model import VideoModel
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, get_optional_user
 from app.models.user_model import UserModel
 from app.db.session import get_db
 
@@ -34,11 +35,16 @@ router = APIRouter(prefix="/videos", tags=["videos"])
 
 
 # --- Public endpoints (no auth required) ---
+# Video endpoints by id only serve private videos to their owner or an admin.
 
 @router.get("/{video_id}/info", response_model=VideoInfoResponse)
-def video_info(video_id: int, db: Session = Depends(get_db)):
+def video_info(
+    video_id: int,
+    db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_optional_user),
+):
     """Full metadata + processing phase summary for a single video."""
-    return get_video_info(db, video_id)
+    return get_video_info(db, video_id, user)
 
 
 @router.get("/{video_id}/dw/stream")
@@ -46,9 +52,10 @@ def stream_dw_video(
     video_id: int,
     range: Optional[str] = Header(None),
     db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_optional_user),
 ):
     """Stream the DW annotated video with Range support."""
-    return get_dw_stream(db, video_id, range)
+    return get_dw_stream(db, video_id, range, user)
 
 
 @router.get("/{video_id}/ew/crops", response_model=CropsPageResponse)
@@ -57,9 +64,10 @@ def ew_crops(
     offset: int = 0,
     limit: int = 20,
     db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_optional_user),
 ):
     """Paginated presigned URLs for EW whale crops."""
-    return get_ew_crops(db, video_id, offset, limit)
+    return get_ew_crops(db, video_id, offset, limit, user)
 
 
 @router.get("/{video_id}/dem/crops", response_model=CropsPageResponse)
@@ -68,9 +76,10 @@ def dem_crops(
     offset: int = 0,
     limit: int = 20,
     db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_optional_user),
 ):
     """Paginated presigned URLs for DEM crops."""
-    return get_dem_crops(db, video_id, offset, limit)
+    return get_dem_crops(db, video_id, offset, limit, user)
 
 
 @router.get("/previews", response_model=VideoPreviewsResponse)
@@ -123,11 +132,10 @@ def stream_video(
     video_id: int,
     range: Optional[str] = Header(None),
     db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_optional_user),
 ):
     """Stream video with Range request support (progressive playback)."""
-    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
-    if not video:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
+    video = get_visible_video(db, video_id, user)
     return get_video_stream(video, range)
 
 

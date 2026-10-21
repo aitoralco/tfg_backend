@@ -16,6 +16,19 @@ In Angular, the cleanest approach is an `HttpInterceptor` that adds this header 
 
 The token expires after **24 hours**. When a protected endpoint returns `401`, redirect the user to login.
 
+### Private videos
+
+Videos with `shared: false` are private. The endpoints that work on a single video (`/videos/{id}`, `/info`, `/dw/stream`, `/ew/crops`, `/dem/crops`) only serve them to their owner or an admin; anyone else gets `404`, as if the video did not exist.
+
+HttpClient requests already carry the token (interceptor). A `<video src>` cannot send headers, so for the two stream URLs add the token as a query parameter:
+
+```
+/videos/{id}?token=<access_token>
+/videos/{id}/dw/stream?token=<access_token>
+```
+
+An invalid or expired token is ignored (treated as anonymous), so public videos keep working.
+
 ---
 
 ## Endpoints
@@ -186,7 +199,7 @@ Authorization: Bearer <admin token>
 }
 ```
 
-Role IDs: `1` = admin, `2` = user.
+Role IDs: `1` = admin, `2` = user, `3` = test.
 
 **Response 200:** updated `UserRead`.
 
@@ -209,15 +222,15 @@ Authorization: Bearer <admin token>
 GET /videos/previews
 ```
 
-No auth required. Anyone can call this.
+No auth required. Anyone can call this. Only videos with `shared: true` are returned, sorted by id.
 
 **Query params:**
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
 | `offset` | int | 0 | Pagination offset |
 | `limit` | int | 10 | Page size (max 50) |
-| `size` | int | 1024 | Bytes to fetch per video for preview |
 | `user_id` | int | — | Filter by uploader ID (optional) |
+| `size` | int | 1024 | Legacy parameter, currently ignored |
 
 **Response 200:**
 ```json
@@ -230,6 +243,8 @@ No auth required. Anyone can call this.
       "file_name": "abc123.MP4",
       "uploader": "username",
       "created_at": "2026-01-01T00:00:00",
+      "status": { "id": 7, "status_name": "processed" },
+      "shared": true,
       "preview": "<base64 string or null>"
     }
   ],
@@ -245,7 +260,7 @@ No auth required. Anyone can call this.
 <img [src]="'data:image/jpeg;base64,' + item.preview" alt="preview" />
 ```
 
-If `preview` is `null`, the thumbnail hasn't been generated yet — show a placeholder image instead.
+If `preview` is `null`, no thumbnail could be generated at upload time — show a placeholder image instead.
 
 Use `total` + `offset` + `limit` to build pagination controls.
 
@@ -269,9 +284,36 @@ No auth required.
 | `offset` | int | Pagination offset (default 0) |
 | `limit` | int | Page size (default 10, max 50) |
 
-All params are optional — omitting all of them returns all videos sorted by newest first.
+All params are optional — omitting all of them returns all shared videos sorted by newest first. Only videos with `shared: true` are returned.
 
-**Response 200:** same shape as `/videos/previews` but `preview` is always `null` (search is lightweight, no bytes fetched).
+**Response 200:** same shape as `/videos/previews` but `preview` is always `null` (search is lightweight, no thumbnails fetched).
+
+---
+
+### 11b. My videos
+
+```
+GET /videos/mine
+Authorization: Bearer <token>
+```
+
+All videos of the logged-in user, **including private ones** (`shared: false`).
+
+**Query params (all optional):**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `q` | string | — | Searches title and description (case-insensitive) |
+| `date_from` | ISO 8601 | — | Earliest upload date |
+| `date_to` | ISO 8601 | — | Latest upload date |
+| `status_id` | int | — | Filter by processing status (see [Video status values](#video-status-values)) |
+| `sort_by` | string | `created_at` | `created_at`, `updated_at` or `title` |
+| `order` | string | `desc` | `asc` or `desc` |
+| `offset` | int | 0 | Pagination offset |
+| `limit` | int | 10 | Page size (max 50) |
+
+**Response 200:** same shape as `/videos/previews`, with the JPEG thumbnail in `preview`.
+
+**Errors:** `401` if not logged in, `400` if a date is not valid ISO 8601.
 
 ---
 
@@ -281,7 +323,7 @@ All params are optional — omitting all of them returns all videos sorted by ne
 GET /videos/{video_id}
 ```
 
-No auth required.
+No auth required for shared videos. Private videos need the owner's or an admin's token (see [Private videos](#private-videos)).
 
 Just use this URL as the `src` of a standard HTML5 `<video>` element. The browser will send `Range` requests automatically and the backend will serve the video progressively (like YouTube):
 
@@ -289,11 +331,103 @@ Just use this URL as the `src` of a standard HTML5 `<video>` element. The browse
 <video controls [src]="apiBase + '/videos/' + videoId"></video>
 ```
 
+For a private video, use `apiBase + '/videos/' + videoId + '?token=' + token`.
+
 Or in Angular using `HttpClient` with `responseType: 'blob'` if you need more control (e.g. custom progress bar).
 
 **Response:** `200 OK` or `206 Partial Content` with `Content-Type: video/mp4` and proper `Content-Range` headers.
 
 **Errors:** `404` if the video doesn't exist.
+
+---
+
+### 12b. Video detail and processing results
+
+```
+GET /videos/{video_id}/info
+```
+
+No auth required for shared videos. Private videos need the owner's or an admin's token (see [Private videos](#private-videos)). Returns the video metadata plus a summary of what the worker has produced so far. Use it to build the video detail page and decide which result sections to show.
+
+**Response 200:**
+```json
+{
+  "id": 42,
+  "title": "Video title",
+  "description": "...",
+  "uploader": "username",
+  "created_at": "2026-01-01T00:00:00",
+  "status": { "id": 7, "status_name": "processed" },
+  "shared": true,
+  "thumbnail": "<base64 JPEG or null>",
+  "dw":  { "available": true, "video_key": "1/42/42/dw/abc_annotated.mp4", "label_count": 310 },
+  "ew":  { "available": true, "crop_count": 120 },
+  "dem": { "available": true, "txt_count": 120, "crop_count": 95 },
+  "classification": {
+    "total_images": 95,
+    "classified_images": 95,
+    "errors": 0,
+    "classes": {
+      "species_name": { "count": 80, "percentage": 84.2, "avg_confidence": 0.91 }
+    }
+  }
+}
+```
+
+- `dw.available`: the annotated video exists → it can be played with `/videos/{id}/dw/stream`.
+- `ew.available` / `dem.available`: crops exist → list them with `/videos/{id}/ew/crops` / `/videos/{id}/dem/crops`.
+- `classification` is `null` until the last phase finishes.
+
+**Errors:** `404` if the video doesn't exist.
+
+---
+
+### 12c. Watch the annotated video (DW)
+
+```
+GET /videos/{video_id}/dw/stream
+```
+
+No auth required for shared videos. Private videos need the owner's or an admin's token (see [Private videos](#private-videos)). Same as [Watch a video](#12-watch-a-video-streaming), but serves the video with the detected whales drawn on it. Supports `Range` requests.
+
+```html
+<video controls [src]="apiBase + '/videos/' + videoId + '/dw/stream'"></video>
+```
+
+**Errors:** `404` if the video doesn't exist or the DW phase hasn't produced the video yet.
+
+---
+
+### 12d. Whale crops (EW) and mark crops (DEM)
+
+```
+GET /videos/{video_id}/ew/crops
+GET /videos/{video_id}/dem/crops
+```
+
+No auth required for shared videos. Private videos need the owner's or an admin's token (see [Private videos](#private-videos)). Paginated list of the crop images produced by the worker.
+
+**Query params:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `offset` | int | 0 | Pagination offset |
+| `limit` | int | 20 | Page size (max 50) |
+
+**Response 200:**
+```json
+{
+  "crops": [
+    { "key": "1/42/42/ew/abc/crop_0001.jpg", "url": "http://localhost:9000/videos-bucket/...&X-Amz-Signature=..." }
+  ],
+  "total": 120,
+  "offset": 0,
+  "limit": 20
+}
+```
+
+`url` is a **presigned MinIO URL valid for 1 hour**: use it directly as the `src` of an `<img>`. If the page stays open longer, request the page again to get fresh URLs.
+
+**Errors:** `404` if the video doesn't exist. If the phase has no results yet, the response is `200` with an empty `crops` list.
 
 ---
 
@@ -331,6 +465,8 @@ Do **not** set `Content-Type` manually — Angular sets it automatically with th
   "video_id": 42
 }
 ```
+
+After the upload the backend generates the thumbnail and enqueues the video for processing. Its status starts as `unprocessed` and the worker updates it (see [Video status values](#video-status-values)).
 
 **Errors:**
 - `401` — not logged in.
@@ -393,7 +529,7 @@ DELETE /videos/{video_id}
 Authorization: Bearer <token>
 ```
 
-Only the owner can delete. Removes the record from the database and the file from storage.
+Only the owner can delete. Removes the record from the database and all its files from storage (original video, thumbnail and processing results).
 
 **Response 204** (no body).
 
@@ -405,26 +541,28 @@ Only the owner can delete. Removes the record from the database and the file fro
 
 ### Auth interceptor
 
-```typescript
-@Injectable()
-export class AuthInterceptor implements HttpInterceptor {
-  constructor(private authService: AuthService) {}
+Functional interceptor (Angular 15+), registered with `provideHttpClient(withInterceptors([authInterceptor]))`:
 
-  intercept(req: HttpRequest<any>, next: HttpHandler) {
-    const token = this.authService.getToken();
-    if (token) {
-      req = req.clone({
-        setHeaders: { Authorization: `Bearer ${token}` }
-      });
-    }
-    return next.handle(req).pipe(
-      catchError(err => {
-        if (err.status === 401) this.authService.logout();
-        return throwError(() => err);
-      })
-    );
-  }
-}
+```typescript
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const token = localStorage.getItem('token');
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  const authReq = token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
+
+  return next(authReq).pipe(
+    catchError((err: HttpErrorResponse) => {
+      if (err.status === 401) {
+        authService.clearSession();
+        router.navigate(['/login']);
+      }
+      return throwError(() => err);
+    })
+  );
+};
 ```
 
 ### Pagination helper
@@ -486,14 +624,14 @@ The browser handles Range requests automatically — no extra code needed.
 
 The `status.status_name` field on a video can be:
 
-| status_name | Meaning |
-|-------------|---------|
-| `unprocessed` | Just uploaded, worker hasn't started |
-| `processing_0` | Worker started |
-| `processing_dw` | Detecting whales |
-| `processing_ew` | Extracting whales |
-| `processing_dem` | Detecting/extracting marks |
-| `processed` | Done |
-| `error` | Processing failed |
+| id | status_name | Meaning |
+|----|-------------|---------|
+| 1 | `error` | Processing failed |
+| 2 | `unprocessed` | Just uploaded, worker hasn't started |
+| 3 | `processing_0` | Worker started (downloading the video) |
+| 4 | `processing_dw` | Detecting whales |
+| 5 | `processing_ew` | Extracting whales |
+| 6 | `processing_dem` | Detecting marks and classifying species |
+| 7 | `processed` | Done |
 
 You can use this to show a progress indicator on the video card.
