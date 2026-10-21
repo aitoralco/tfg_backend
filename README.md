@@ -27,6 +27,10 @@ alembic/
 ├── env.py           # takes the DB URL from settings.DATABASE_URL
 └── versions/        # migration files (versioned in git)
 alembic.ini
+tests/
+├── conftest.py      # fixtures: SQLite DB, fake S3 (moto), fake Redis, factories
+├── unit/            # isolated functions and classes
+└── integration/     # HTTP API end to end with the fake services
 ```
 
 ## Environment variables
@@ -144,6 +148,20 @@ uv run python -m app.db.starter
 ```bash
 docker compose exec db-postgres psql -U <DB_USER> -d <DB_NAME>
 ```
+
+## Tests
+
+The suite uses pytest and needs no running service: Postgres is replaced by in-memory SQLite, MinIO by [moto](https://github.com/getmoto/moto), Redis by [fakeredis](https://github.com/cunla/fakeredis-py) and ffmpeg by a stub.
+
+```bash
+uv sync                           # installs the dev dependencies too
+uv run pytest                     # whole suite
+uv run pytest -m unit             # only unit tests
+uv run pytest -m integration      # only API tests
+uv run pytest --cov               # with coverage report
+```
+
+Known bugs are kept as `xfail` tests with the reason in the marker. They run in strict mode: once a bug is fixed the test passes, pytest reports it as `XPASS(strict)` and the marker has to be removed.
 
 ## Documentation
 

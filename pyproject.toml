@@ -18,4 +18,39 @@ dependencies = [
     "uvicorn>=0.37.0",
     "python-jose[cryptography]>=3.3.0",
     "pydantic-settings>=2.0.0",
+    "bcrypt>=4.0.1,<5",
 ]
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.40.0",
+    "httpx>=0.28.1",
+    "moto[s3]>=5.2.4",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "unit: fast tests of isolated functions and classes",
+    "integration: tests that go through the HTTP API with the app wired to fake services",
+]
+xfail_strict = true
+# Known deprecations in app code (models use datetime.utcnow, video_service uses the old 416 name).
+# Filtered one by one so any new warning still shows up.
+filterwarnings = [
+    'ignore:datetime.datetime.utcnow\(\) is deprecated:DeprecationWarning',
+    "ignore:'HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE' is deprecated:DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = ["app/db/starter.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
