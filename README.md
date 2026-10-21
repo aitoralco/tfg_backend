@@ -153,4 +153,4 @@ docker compose exec db-postgres psql -U <DB_USER> -d <DB_NAME>
 
 ## License
 
-© 2026 Aitor Alonso Coloma. Licensed under [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](LICENSE): you can use, share and adapt it for non-commercial purposes, as long as you credit the author and link to the license.
+© 2026 Aitor Alonso Coloma. Licensed under the [MIT License](LICENSE).
