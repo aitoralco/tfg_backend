@@ -49,6 +49,7 @@ class VideoPreview(BaseModel):
     uploader: Optional[str] = None
     created_at: Optional[datetime] = None
     status: Optional[VideoStatusRead] = None
+    shared: bool
     preview: Optional[str] = None
 
 

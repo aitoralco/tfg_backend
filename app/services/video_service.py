@@ -23,6 +23,21 @@ from datetime import datetime
 from typing import List, Optional
 
 
+def get_visible_video(db: Session, video_id: int, user: Optional[UserModel]) -> VideoModel:
+    """
+    Video if the requester can see it: shared, owned by the user or user is admin.
+    Otherwise 404, so private videos are indistinguishable from missing ones.
+    """
+    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
+    can_see = video is not None and (
+        video.shared
+        or (user is not None and (user.id == video.user_id or user.role.name == "admin"))
+    )
+    if not can_see:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
+    return video
+
+
 def create_video_status(db: Session, status_name: str):
     db_model = VideoStatusModel(status_name=status_name)
     db.add(db_model)
@@ -258,6 +273,7 @@ def get_videos_previews(
             "uploader": v.user.username if v.user else None,
             "created_at": v.created_at,
             "status": {"id": v.status.id, "status_name": v.status.status_name},
+            "shared": v.shared,
             "preview": None,
         }
         thumbnail = fs_client.get_thumbnail(v.user_id, v.group_id)
@@ -268,10 +284,8 @@ def get_videos_previews(
     return {"previews": previews, "total": total, "offset": offset, "limit": limit}
 
 
-def get_video_info(db: Session, video_id: int) -> dict:
-    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
-    if not video:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
+def get_video_info(db: Session, video_id: int, user: Optional[UserModel]) -> dict:
+    video = get_visible_video(db, video_id, user)
 
     fs = FileSystemClient()
 
@@ -387,6 +401,7 @@ def get_my_videos(
             "uploader": v.user.username if v.user else None,
             "created_at": v.created_at,
             "status": {"id": v.status.id, "status_name": v.status.status_name},
+            "shared": v.shared,
             "preview": None,
         }
         thumbnail = fs_client.get_thumbnail(v.user_id, v.group_id)
@@ -397,10 +412,10 @@ def get_my_videos(
     return {"previews": previews, "total": total, "offset": offset, "limit": limit}
 
 
-def get_dw_stream(db: Session, video_id: int, range_header: str | None) -> StreamingResponse:
-    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
-    if not video:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
+def get_dw_stream(
+    db: Session, video_id: int, range_header: str | None, user: Optional[UserModel]
+) -> StreamingResponse:
+    video = get_visible_video(db, video_id, user)
 
     fs = FileSystemClient()
     dw_prefix = f"{video.user_id}/{video.group_id}/{video_id}/dw/"
@@ -441,11 +456,11 @@ def _get_crops_page(objects: list[dict], fs: FileSystemClient, offset: int, limi
     return {"crops": crops, "total": total, "offset": offset, "limit": limit}
 
 
-def get_ew_crops(db: Session, video_id: int, offset: int, limit: int) -> dict:
+def get_ew_crops(
+    db: Session, video_id: int, offset: int, limit: int, user: Optional[UserModel]
+) -> dict:
     limit = min(limit, 50)
-    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
-    if not video:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
+    video = get_visible_video(db, video_id, user)
 
     fs = FileSystemClient()
     ew_prefix = f"{video.user_id}/{video.group_id}/{video_id}/ew/"
@@ -456,11 +471,11 @@ def get_ew_crops(db: Session, video_id: int, offset: int, limit: int) -> dict:
     return _get_crops_page(crops, fs, offset, limit)
 
 
-def get_dem_crops(db: Session, video_id: int, offset: int, limit: int) -> dict:
+def get_dem_crops(
+    db: Session, video_id: int, offset: int, limit: int, user: Optional[UserModel]
+) -> dict:
     limit = min(limit, 50)
-    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
-    if not video:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
+    video = get_visible_video(db, video_id, user)
 
     fs = FileSystemClient()
     dem_prefix = f"{video.user_id}/{video.group_id}/{video_id}/dem/"
@@ -526,6 +541,7 @@ def search_videos(
             "uploader": v.user.username if v.user else None,
             "created_at": v.created_at,
             "status": {"id": v.status.id, "status_name": v.status.status_name},
+            "shared": v.shared,
             "preview": None,  # search results skip heavy preview fetch
         }
         for v in videos
