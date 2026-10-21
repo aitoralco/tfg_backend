@@ -27,6 +27,10 @@ alembic/
 ├── env.py           # toma la URL de la BD de settings.DATABASE_URL
 └── versions/        # ficheros de migración (versionados en git)
 alembic.ini
+tests/
+├── conftest.py      # fixtures: BD SQLite, S3 falso (moto), Redis falso, factorías
+├── unit/            # funciones y clases aisladas
+└── integration/     # API HTTP de punta a punta con los servicios falsos
 ```
 
 ## Variables de entorno
@@ -144,6 +148,20 @@ uv run python -m app.db.starter
 ```bash
 docker compose exec db-postgres psql -U <DB_USER> -d <DB_NAME>
 ```
+
+## Tests
+
+La suite usa pytest y no necesita ningún servicio arrancado: Postgres se sustituye por SQLite en memoria, MinIO por [moto](https://github.com/getmoto/moto), Redis por [fakeredis](https://github.com/cunla/fakeredis-py) y ffmpeg por un stub.
+
+```bash
+uv sync                           # instala también las dependencias de desarrollo
+uv run pytest                     # suite completa
+uv run pytest -m unit             # solo tests unitarios
+uv run pytest -m integration      # solo tests de la API
+uv run pytest --cov               # con informe de cobertura
+```
+
+Los bugs conocidos están como tests `xfail` con el motivo en el marcador. Se ejecutan en modo estricto: cuando se arregla el bug el test pasa, pytest lo marca como `XPASS(strict)` y hay que quitar el marcador.
 
 ## Documentación
 
