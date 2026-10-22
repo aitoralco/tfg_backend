@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from app.models.user_model import UserModel
 from app.models.role_model import RoleModel
@@ -17,6 +18,28 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_user(db: Session, user: UserCreate) -> UserModel:
+
+    # check if username already exists
+    existing_names = db.query(UserModel).filter(UserModel.username == user.username).first()
+
+    if existing_names:
+        # name already exists
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already exists"
+        )
+
+    # check if email exists
+    existing_mails = db.query(UserModel).filter(UserModel.email == user.email).first()
+
+    if existing_mails:
+        # emails already exist
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered"
+        )
+
+    # Since username and email do not exist we can proceed
     db_user = UserModel(
         username=user.username,
         email=user.email,
@@ -24,7 +47,16 @@ def create_user(db: Session, user: UserCreate) -> UserModel:
         role_id=2,  # default: regular user
     )
     db.add(db_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        print(e)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An error ocurred creating the user",
+        )
+
     db.refresh(db_user)
     return db_user
 

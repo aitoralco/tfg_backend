@@ -57,7 +57,7 @@ class TestRegister:
     def test_invalid_payload_is_422(self, client, payload):
         assert client.post("/users/register", json=payload).status_code == 422
 
-    @pytest.mark.xfail(reason="Unique constraint violation is not handled: the API answers 500")
+    #@pytest.mark.xfail(reason="Unique constraint violation is not handled: the API answers 500")
     @pytest.mark.parametrize(
         "payload",
         [
