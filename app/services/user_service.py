@@ -85,13 +85,41 @@ def self_update_user(db: Session, user: UserModel, update: UserSelfUpdate) -> Us
         )
 
     if update.username is not None:
+        username_check = db.query(UserModel).filter(
+            UserModel.username == update.username,
+            UserModel.id != user.id
+            ).first()
+        if username_check:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Username already exists"
+            )
         user.username = update.username
+
     if update.email is not None:
+        email_check = db.query(UserModel).filter(
+            UserModel.email == update.email,
+            UserModel.id != user.id
+            ).first()
+        if email_check:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already in use in another account"
+            )
         user.email = update.email
+    
     if update.new_password is not None:
         user.password_hash = get_password_hash(update.new_password)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        print(e)
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An error ocurred updating the user",
+        )
     db.refresh(user)
     return user
 

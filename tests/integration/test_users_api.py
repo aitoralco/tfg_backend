@@ -57,7 +57,6 @@ class TestRegister:
     def test_invalid_payload_is_422(self, client, payload):
         assert client.post("/users/register", json=payload).status_code == 422
 
-    #@pytest.mark.xfail(reason="Unique constraint violation is not handled: the API answers 500")
     @pytest.mark.parametrize(
         "payload",
         [
@@ -186,7 +185,6 @@ class TestUpdateMe:
         db.refresh(user)
         assert user.role.name == "user"
 
-    @pytest.mark.xfail(reason="Unique constraint violation is not handled: the API answers 500")
     def test_taking_another_users_username_is_a_client_error(
         self, client_no_raise, user, other_user, auth_headers
     ):
@@ -285,7 +283,7 @@ class TestAdminEndpoints:
         assert verify_password("reset-pw", user.password_hash)
 
     def test_admin_does_not_need_the_users_password(self, client, admin, user, auth_headers):
-        response = client.put(f"/users/{user.id}", headers=auth_headers(admin), json={"username": "x"})
+        response = client.put(f"/users/{user.id}", headers=auth_headers(admin), json={"username": "xyz"})
 
         assert response.status_code == 200
 
@@ -299,7 +297,7 @@ class TestAdminEndpoints:
         assert other_admin.role.name == "user"
 
     def test_admin_update_of_unknown_user_is_404(self, client, admin, auth_headers):
-        assert client.put("/users/9999", headers=auth_headers(admin), json={"username": "x"}).status_code == 404
+        assert client.put("/users/9999", headers=auth_headers(admin), json={"username": "xyz"}).status_code == 404
 
     def test_admin_deletes_a_user(self, client, db, admin, user, auth_headers):
         response = client.delete(f"/users/{user.id}", headers=auth_headers(admin))

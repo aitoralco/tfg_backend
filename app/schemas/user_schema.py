@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
@@ -41,16 +41,16 @@ class UserLogin(BaseModel):
 # Used by a regular user to update their own data — requires current password
 class UserSelfUpdate(BaseModel):
     current_password: str
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    new_password: Optional[str] = None
+    username: Optional[str] = Field(None, min_length=3)
+    email: Optional[EmailStr] = Field(None, min_lenght=5)
+    new_password: Optional[str] = Field(None, min_lenght=8)
 
 
 # Used by an admin to update any user — no password verification required
 class UserAdminUpdate(BaseModel):
-    username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
+    username: Optional[str] = Field(None, min_length=3)
+    email: Optional[EmailStr] = Field(None, min_lenght=5)
+    password: Optional[str] = Field(None, min_lenght=8)
     role_id: Optional[int] = None
 
 
