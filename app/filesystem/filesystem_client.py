@@ -1,6 +1,7 @@
 import boto3
 from botocore.client import Config
 from app.core.config import settings
+from typing import List
 
 
 class FileSystemClient:
@@ -132,18 +133,19 @@ class FileSystemClient:
         )
         return response["Body"].iter_chunks(512 * 1024)
 
-    def delete_group(self, user_id: int, group_id: int):
+    def delete_group(self, user_id: int, group_ids: List[int]):
         """Delete all objects under {user_id}/{group_id}/ (video file + thumbnail + any derivatives)."""
-        prefix = f"{user_id}/{group_id}/"
         paginator = self.s3_client.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
-            objects = page.get("Contents", [])
-            if not objects:
-                continue
-            self.s3_client.delete_objects(
-                Bucket=self.bucket,
-                Delete={"Objects": [{"Key": obj["Key"]} for obj in objects]},
-            )
+        for group_id in group_ids:
+            prefix = f"{user_id}/{group_id}/"
+            for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+                objects = page.get("Contents", [])
+                if not objects:
+                    continue
+                self.s3_client.delete_objects(
+                    Bucket=self.bucket,
+                    Delete={"Objects": [{"Key": obj["Key"]} for obj in objects]},
+                )
 
     # Legacy file-based upload (kept for backward compatibility)
     def upload_video(self, file_path: str, object_name: str, user_id: str, processed: bool = False):

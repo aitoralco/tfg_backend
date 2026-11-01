@@ -3,7 +3,9 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from app.models.user_model import UserModel
 from app.models.role_model import RoleModel
+from app.models.video_model import VideoModel
 from app.schemas.user_schema import UserCreate, UserRead, RoleCreate, UserSelfUpdate, UserAdminUpdate
+from app.filesystem import FileSystemClient
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -147,8 +149,18 @@ def admin_update_user(db: Session, user_id: int, update: UserAdminUpdate) -> Use
 def delete_db_user(db: Session, user_id: int) -> bool:
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if user:
+        # Obtain list of videos to delete before deleting user in db
+        videos_list = db.query(VideoModel).filter(VideoModel.user_id == user_id).all()
+        
+        # Delete in DB
         db.delete(user)
         db.commit()
+
+        # Delete files
+        group_ids = [video.group_id for video in videos_list]
+        fs_client = FileSystemClient()
+        fs_client.delete_group(user_id, group_ids)
+
         return True
     return False
 

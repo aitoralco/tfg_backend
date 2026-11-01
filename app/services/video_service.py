@@ -177,7 +177,7 @@ def delete_video(db: Session, video_id: int, user_id: int):
 
     try:
         fs_client = FileSystemClient()
-        fs_client.delete_group(video.user_id, video.group_id)
+        fs_client.delete_group(video.user_id, [video.group_id])
     except Exception:
         pass  # log but don't block DB deletion
 

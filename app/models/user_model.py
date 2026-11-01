@@ -23,4 +23,4 @@ class UserModel(Base):
     role = relationship("RoleModel", back_populates="users", lazy="joined")
 
     # Relación con los videos
-    videos = relationship("VideoModel", back_populates="user")
+    videos = relationship("VideoModel", back_populates="user", cascade="all")

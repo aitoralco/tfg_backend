@@ -51,3 +51,44 @@ Además, `min_length` en un `EmailStr` no aporta nada: `EmailStr` ya valida el f
 - [ ] Arreglar los 4 bugs de los xfail y quitar los marcadores.
 - [ ] Proteger (o eliminar) los endpoints de debug y añadir sus tests.
 - [ ] Añadir los tests que faltan de la lista anterior.
+
+## 2026-10-29 (noche) - Borrar usuario con vídeos (en curso, sin commit)
+
+Modo de trabajo: lo implemento yo; Claude solo revisa, explica y da pistas, sin editar código.
+
+### Hecho
+
+- `app/models/user_model.py`: `videos = relationship(..., cascade="all")`. El borrado en la BD ya funciona: al borrar el usuario se borran sus vídeos. Antes daba 500 porque SQLAlchemy intentaba poner `videos.user_id = NULL` y la columna es `nullable=False`.
+
+### En curso: borrar los ficheros del usuario en MinIO
+
+Estado actual de `delete_db_user` (`app/services/user_service.py`): el usuario se borra pero **su directorio de MinIO se queda**, sin errores en los logs.
+
+Causa: los vídeos se consultan **después** de `db.commit()`, cuando el cascade ya los ha borrado. La lista sale vacía y no se borra nada.
+
+Arreglo elegido (opción B): borrar todo el prefijo `{user_id}/` en MinIO **después** del commit en la BD, sin depender de los `group_id`.
+- S3/MinIO no permite borrar por prefijo: primero hay que listar las claves (paginator `list_objects_v2`) y luego pasarlas a `delete_objects`, como hace `delete_group`.
+- El prefijo tiene que acabar en `/` (`"5/"`). Con `"5"` también se borrarían los ficheros de los usuarios 50, 51...
+- Hay que envolver la llamada a MinIO en `try/except`, como en `delete_video`, para que un fallo de almacenamiento no dé 500 cuando el usuario ya está borrado.
+- Opción A (descartada): sacar los `group_ids` de `user.videos` **antes** del `db.delete(user)`.
+
+### Por deshacer o revisar
+
+- He cambiado la firma de `delete_group` a `group_ids: List[int]` (y su llamada en `video_service.delete_video`). Esto rompe `tests/unit/test_filesystem_client.py:101`. Con la opción B, lo suyo es volver a dejarla como estaba (o refactorizar a un método genérico `delete_prefix(prefix)`).
+- Si ya no se usan, quitar el import de `VideoModel` en `user_service.py` y `from typing import List` en `filesystem_client.py`.
+
+### Para darlo por cerrado
+
+- [ ] Quitar el `@pytest.mark.xfail` de `tests/integration/test_users_api.py:224` (con `xfail_strict` daría XPASS).
+- [ ] `uv run pytest`, la suite entera.
+- [ ] Opcional: un test que compruebe que en el bucket no queda ningún objeto con el prefijo del usuario.
+- [ ] Prueba manual: crear usuario, subir vídeo, `DELETE /users/me`. Comprobar la BD (`docker exec -it <contenedor> psql -U <usuario> -d cetaceans -c "SELECT ..."`) y MinIO.
+
+### Otros problemas detectados en la revisión (no estaban en la lista de pendientes)
+
+- [ ] La subida guarda el vídeo en un fichero temporal (`tempfile` en `save_video`) para ffmpeg. El requisito es subirlo en stream sin guardar nada en el backend.
+- [ ] Con `date_to=YYYY-MM-DD` se interpreta como 00:00 y se pierden los vídeos de ese día (`/search` y `/mine`).
+- [ ] `PUT /users/{id}` con un `role_id` que no existe y `POST /users/roles` con un rol duplicado dan 500. Además, `RoleCreate` obliga a mandar el id.
+- [ ] Cambio de contraseña: sin longitud mínima, sin confirmación, y los JWT antiguos siguen siendo válidos 24 h.
+- [ ] Un admin puede borrarse a sí mismo o borrar al último admin.
+- [ ] Detalles menores: `Content-Range` en respuestas 200; `size` sin usar y `if user_id:` en `/previews`; `sort_by`/`order` inválidos ignorados en silencio; `/search` sin miniaturas; código muerto (`utils/response_model.py`, `core/exceptions.py`, `upload_video` antiguo).
